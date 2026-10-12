@@ -1,18 +1,19 @@
-FROM python:3.12@sha256:63828510c8b5ccce3bf0d6fabd6f3d17d4effa1ffe690f80a67c8e2d394e03ee
+FROM python:3.12-slim-bookworm@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258
 
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    gcc \
-    curl \
-    vim
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY . .
+RUN useradd --uid 10001 --user-group --no-create-home --shell /usr/sbin/nologin appuser
 
-RUN pip install -r app/requirements.txt
+COPY app/requirements.txt ./app/requirements.txt
+RUN pip install --no-cache-dir -r app/requirements.txt
+
+COPY app/ ./app/
+
+USER 10001
 
 EXPOSE 8080
 
-# The whole context was copied to /app, so the app package lives in /app/app.
-CMD ["gunicorn", "--chdir", "app", "--bind", "0.0.0.0:8080", "--workers", "2", "app:app"]
+CMD ["gunicorn", "--chdir", "app", "--bind", "0.0.0.0:8080", "--workers", "2", "--access-logfile", "-", "--error-logfile", "-", "app:app"]
